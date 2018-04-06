@@ -31,13 +31,22 @@
       theme: 'snow',
       formats: []
     });
+    quill.on('text-change', function (delta, oldDelta, source) {
+      if (source == 'api') {
+        console.log("An API call triggered this change.");
+      } else if (source == 'user') {
+        var str = JSON.stringify(delta, null, 2)
+        ws.send(str);
+      }
+    });
   </script>
 
 
   <p id="output"></p>
 
   <script>
-    var id=new Date().getTime() / 1000000
+    var Delta = Quill.import('delta');
+    var id = new Date().getTime() / 1000000
     var loc = window.location;
     var uri = 'ws:';
 
@@ -56,11 +65,13 @@
     ws.onmessage = function (evt) {
       var out = document.getElementById('output');
       out.innerHTML += evt.data + '<br>';
+      var obj = obj = JSON.parse(evt.data);
+      quill.updateContents(new Delta(obj));
     }
 
-    setInterval(function () {
-      ws.send('Hello, Server! id:'+id);
-    }, 1000);
+//    setInterval(function () {
+//      ws.send('Hello, Server! id:' + id);
+//    }, 1000);
   </script>
 
 
