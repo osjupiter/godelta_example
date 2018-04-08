@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
-	"log"
 )
 
 var (
@@ -13,6 +14,7 @@ var (
 	newbie   = make(chan *websocket.Conn, 10)
 	clients  = make([]*websocket.Conn, 10)
 	receives = make(chan data, 10)
+	memory   = make([]data, 10)
 )
 
 type data struct {
@@ -25,6 +27,7 @@ func wsWatch(id int, receiveChan chan data, ws *websocket.Conn) {
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
 			log.Printf("%s", err)
+			break
 		}
 		fmt.Printf("%s\n", msg)
 		receiveChan <- data{string(msg), id}
@@ -46,15 +49,19 @@ func daemon() {
 
 				clients = append(clients, v)
 				go wsWatch(len(clients)-1, receives, v)
+				for _, d := range memory {
+					wsSend(d, v)
+				}
 			} else {
 				log.Print("something happen")
 			}
 		case v, _ := <-receives:
+			memory = append(memory, v)
 			for i, ws := range clients {
 				if i == v.id {
 					continue
 				}
-				if ws==nil{
+				if ws == nil {
 					continue
 				}
 				wsSend(v, ws)
